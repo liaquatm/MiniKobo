@@ -1,2 +1,5 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MiniKobo.Catalog.Api/MiniKobo.Catalog.Api.csproj" />
+  </Folder>
 </Solution>

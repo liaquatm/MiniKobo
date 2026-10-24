@@ -17,7 +17,7 @@ Branch: `m0-foundations`
 - [x] Solution-wide settings: `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`
 - [x] `docker-compose.yml` with RavenDB, PostgreSQL, RabbitMQ and Mailpit; secrets in `.env` (git-ignored) with a committed `.env.example`
 - [x] Open each tool's web UI to confirm it is running
-- [ ] **Review checkpoint**
+- [x] **Review checkpoint** (skipped by choice)
 
 Concepts: solution/project structure, NuGet and Central Package Management, Docker Compose basics.
 
