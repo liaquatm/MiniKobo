@@ -1,0 +1,123 @@
+# MiniKobo Roadmap
+
+Milestone plan for MiniKobo. The reasons behind each decision are in [ARCHITECTURE.md](ARCHITECTURE.md).
+
+**How we work**
+- Each milestone has its own branch and is merged into `main` through a pull request.
+- Each milestone ends with a **review checkpoint**: we walk through the code and concepts before moving on.
+- Tests are written within each milestone, not left until the end.
+
+---
+
+## M0 – Environment and repository foundations
+Branch: `m0-foundations`
+
+- [ ] Verify tooling: .NET 10 SDK, Docker, Node.js, IDE
+- [ ] Git: settle on `main` as the default branch, make an initial commit, create a GitHub remote
+- [ ] Solution-wide settings: `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`
+- [ ] `docker-compose.yml` with RavenDB, SQL Server, RabbitMQ and Mailpit
+- [ ] Open each tool's web UI to confirm it is running
+- [ ] **Review checkpoint**
+
+Concepts: solution/project structure, NuGet and Central Package Management, Docker Compose basics.
+
+## M1 – Catalog API (RavenDB)
+Branch: `m1-catalog-api`
+
+- [ ] Create `MiniKobo.Catalog.Api` (Minimal APIs) and add it to the solution
+- [ ] Register the RavenDB `DocumentStore` in DI, with a session per request
+- [ ] `Book` document and seed data
+- [ ] `GET /books` (paged) and `GET /books/{id}`
+- [ ] Full-text search index and `GET /books?search=…`
+- [ ] Configuration (`appsettings.json`, environment variables) and `ProblemDetails` errors
+- [ ] NUnit unit tests project
+- [ ] Testcontainers integration test against RavenDB
+- [ ] **Review checkpoint**
+
+Concepts: ASP.NET Core startup pipeline, DI lifetimes, document modelling, indexes.
+
+## M2 – Orders API part 1: cart (SQL Server, EF Core)
+Branch: `m2-orders-cart`
+
+- [ ] Create `MiniKobo.Orders.Api`
+- [ ] `OrdersDbContext` with `Cart` / `CartItem` entities and the first migration
+- [ ] `POST /carts`, `GET /carts/{id}`
+- [ ] `PUT /carts/{id}/items/{bookId}` (set quantity), `DELETE /carts/{id}/items/{bookId}`
+- [ ] Typed `HttpClient` to the Catalog API for title and price
+- [ ] Request validation
+- [ ] Unit tests and a SQL Server Testcontainers integration test
+- [ ] **Review checkpoint**
+
+Concepts: EF Core change tracking and migrations, `HttpClientFactory`, validation.
+
+## M3 – Checkout and messaging foundations
+Branch: `m3-checkout-messaging`
+
+- [ ] Create `MiniKobo.Contracts` with the message classes
+- [ ] NServiceBus in the Orders API: RabbitMQ transport, SQL persistence, outbox
+- [ ] `Order` entity and migration
+- [ ] `POST /orders`: cart → `Order` (status `Placed`) and publish `OrderPlaced`
+- [ ] `GET /orders/{id}` for status
+- [ ] A temporary logging handler; watch the message in the RabbitMQ UI
+- [ ] **Review checkpoint**
+
+Concepts: queues and exchanges, commands vs events, the outbox pattern.
+
+## M4 – Order-processing saga
+Branch: `m4-order-saga`
+
+- [ ] Create `MiniKobo.Orders.Worker` hosting `OrderProcessingSaga`
+- [ ] Catalog API as an NServiceBus endpoint: `ReserveStock` / `ReleaseStock` handlers using optimistic concurrency
+- [ ] Simulated payment with a configurable failure rate
+- [ ] `SendConfirmationEmail` handler sending SMTP to Mailpit
+- [ ] Order status updated at each step, with compensation on failure
+- [ ] Retries, error queue, and idempotent handlers
+- [ ] Saga unit tests with `NServiceBus.Testing`
+- [ ] **Review checkpoint**
+
+Concepts: sagas, compensation, at-least-once delivery, eventual consistency.
+
+## M5 – Next.js frontend
+Branch: `m5-frontend`
+
+- [ ] Create the Next.js (App Router, TypeScript) app in `web/`
+- [ ] Decide: browser calls the APIs directly (CORS) or through Next.js server code
+- [ ] Catalog page with search, and a book details page
+- [ ] Cart page (change quantities, remove items)
+- [ ] Checkout form (name and email)
+- [ ] Order status page with polling
+- [ ] **Review checkpoint**
+
+Concepts: React components, server vs client components, TypeScript types for API DTOs.
+
+## M6 – End-to-end testing
+Branch: `m6-e2e-tests`
+
+- [ ] Playwright setup
+- [ ] Happy path: search → add to cart → checkout → `Confirmed` → email in Mailpit
+- [ ] (Optional) Unhappy path: payment fails and stock is released
+- [ ] Review the overall test strategy
+- [ ] **Review checkpoint**
+
+## M7 – Containerisation and CI
+Branch: `m7-docker-ci`
+
+- [ ] Multi-stage Dockerfiles for each .NET service and for `web/`
+- [ ] The full stack starts with `docker compose up`
+- [ ] GitHub Actions: build → unit tests → integration tests → Playwright
+- [ ] **Review checkpoint**
+
+Concepts: container images, CI pipelines, caching.
+
+## M8 – Real-time status (SignalR)
+Branch: `m8-signalr`
+
+- [ ] Compare SignalR vs Server-Sent Events
+- [ ] Push order status changes to the browser
+- [ ] Keep polling as a fallback
+- [ ] **Review checkpoint**
+
+## Final – Retrospective
+- [ ] Walk through the full architecture
+- [ ] What worked, what we'd change
+- [ ] What production would need: auth, observability, scaling, real payments
