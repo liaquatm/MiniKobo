@@ -12,11 +12,11 @@ Milestone plan for MiniKobo. The reasons behind each decision are in [ARCHITECTU
 ## M0 – Environment and repository foundations
 Branch: `m0-foundations`
 
-- [ ] Verify tooling: .NET 10 SDK, Docker, Node.js, IDE
-- [ ] Git: settle on `main` as the default branch, make an initial commit, create a GitHub remote
-- [ ] Solution-wide settings: `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`
-- [ ] `docker-compose.yml` with RavenDB, SQL Server, RabbitMQ and Mailpit
-- [ ] Open each tool's web UI to confirm it is running
+- [x] Verify tooling: .NET SDK 10.0.402, Docker 29.1.3 / Compose v2.40.3 (Docker Desktop), Node v24.3.0, VS Code
+- [x] Git: settle on `main` as the default branch, make an initial commit, create a GitHub remote (`github.com/liaquatm/MiniKobo`)
+- [x] Solution-wide settings: `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`
+- [x] `docker-compose.yml` with RavenDB, PostgreSQL, RabbitMQ and Mailpit; secrets in `.env` (git-ignored) with a committed `.env.example`
+- [x] Open each tool's web UI to confirm it is running
 - [ ] **Review checkpoint**
 
 Concepts: solution/project structure, NuGet and Central Package Management, Docker Compose basics.
@@ -36,16 +36,16 @@ Branch: `m1-catalog-api`
 
 Concepts: ASP.NET Core startup pipeline, DI lifetimes, document modelling, indexes.
 
-## M2 – Orders API part 1: cart (SQL Server, EF Core)
+## M2 – Orders API part 1: cart (PostgreSQL, EF Core)
 Branch: `m2-orders-cart`
 
 - [ ] Create `MiniKobo.Orders.Api`
-- [ ] `OrdersDbContext` with `Cart` / `CartItem` entities and the first migration
+- [ ] `OrdersDbContext` (Npgsql provider, `snake_case` naming) with `Cart` / `CartItem` entities and the first migration
 - [ ] `POST /carts`, `GET /carts/{id}`
 - [ ] `PUT /carts/{id}/items/{bookId}` (set quantity), `DELETE /carts/{id}/items/{bookId}`
 - [ ] Typed `HttpClient` to the Catalog API for title and price
 - [ ] Request validation
-- [ ] Unit tests and a SQL Server Testcontainers integration test
+- [ ] Unit tests and a PostgreSQL Testcontainers integration test
 - [ ] **Review checkpoint**
 
 Concepts: EF Core change tracking and migrations, `HttpClientFactory`, validation.
@@ -54,7 +54,7 @@ Concepts: EF Core change tracking and migrations, `HttpClientFactory`, validatio
 Branch: `m3-checkout-messaging`
 
 - [ ] Create `MiniKobo.Contracts` with the message classes
-- [ ] NServiceBus in the Orders API: RabbitMQ transport, SQL persistence, outbox
+- [ ] NServiceBus in the Orders API: RabbitMQ transport, SQL persistence (PostgreSQL dialect), outbox
 - [ ] `Order` entity and migration
 - [ ] `POST /orders`: cart → `Order` (status `Placed`) and publish `OrderPlaced`
 - [ ] `GET /orders/{id}` for status
@@ -121,3 +121,4 @@ Branch: `m8-signalr`
 - [ ] Walk through the full architecture
 - [ ] What worked, what we'd change
 - [ ] What production would need: auth, observability, scaling, real payments
+- [ ] (Optional) Switch the Orders EF Core provider and NServiceBus dialect to SQL Server, to practise SQL Server and see how provider-agnostic the code really is

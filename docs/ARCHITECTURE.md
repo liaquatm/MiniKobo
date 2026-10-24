@@ -22,7 +22,7 @@ MiniKobo is a small online bookstore. Customers browse and search books, manage 
  └───────┬──────────┘                        └────────┬──────────┘
          │                                            │ writes Order + publishes event
          ▼                                            ▼ (atomically, via outbox)
-     RavenDB                                      SQL Server
+     RavenDB                                      PostgreSQL
          ▲                                            ▲
          │ reserve/release stock                      │ update status
  ┌───────┴──────────┐     RabbitMQ (NServiceBus)    ┌─┴─────────────────────┐
@@ -38,8 +38,8 @@ MiniKobo is a small online bookstore. Customers browse and search books, manage 
 | Project | Responsibility | Data store |
 |---|---|---|
 | `MiniKobo.Catalog.Api` | Books, search, stock levels. Also an NServiceBus endpoint handling stock reservation. | RavenDB |
-| `MiniKobo.Orders.Api` | Carts, placing orders, order status. | SQL Server (EF Core) |
-| `MiniKobo.Orders.Worker` | Hosts the order-processing saga: stock → payment → email. | SQL Server (saga state + outbox) |
+| `MiniKobo.Orders.Api` | Carts, placing orders, order status. | PostgreSQL (EF Core) |
+| `MiniKobo.Orders.Worker` | Hosts the order-processing saga: stock → payment → email. | PostgreSQL (saga state + outbox) |
 | `MiniKobo.Contracts` | Message classes (commands/events) shared between services. | – |
 | `web/` | Next.js + TypeScript frontend. | – |
 
@@ -54,11 +54,15 @@ A book is a self-contained aggregate that is read far more often than it is writ
 
 **Stock** is stored on the book document. Reservations use RavenDB **optimistic concurrency**: a write fails if the document changed since we read it, so two orders can't both take the last copy.
 
-### 3.2 Orders in SQL Server with EF Core
-Orders and carts need transactions and strict consistency. EF Core maps C# classes to tables, tracks changes, and versions the schema through **migrations** that we commit to git. We chose it over Dapper because it's the most common choice in the .NET ecosystem and saves us writing SQL by hand. Dapper remains an option for performance-critical queries.
+### 3.2 Orders in PostgreSQL with EF Core
+Orders and carts need transactions and strict consistency, which is what a relational database provides.
+
+**Why PostgreSQL instead of SQL Server (the original scope):** SQL Server images are only published for x86/amd64. On Apple Silicon they run under Rosetta emulation, which is slow and needs at least 2 GB of RAM, and Testcontainers would start extra instances on top of that. PostgreSQL runs natively on arm64, is lightweight, and is fully supported by both EF Core (the Npgsql provider) and NServiceBus SQL persistence (`SqlDialect.PostgreSql()`). The concepts we're learning (relational modelling, transactions, migrations, the outbox) are the same on both. Table names use `snake_case`, the PostgreSQL convention, mapped from C# `PascalCase` by a naming-convention package.
+
+**Data access:** EF Core maps C# classes to tables, tracks changes, and versions the schema through **migrations** that we commit to git. We chose it over Dapper because it's the most common choice in the .NET ecosystem and saves us writing SQL by hand. Dapper remains an option for performance-critical queries.
 
 ### 3.3 Cart stored server-side
-The cart lives in SQL Server, owned by the Orders API. A guest gets a cart id (a GUID) that the browser stores. This gives us practice with CRUD endpoints and EF Core before the asynchronous work starts. It also means a cart survives page refreshes.
+The cart lives in PostgreSQL, owned by the Orders API. A guest gets a cart id (a GUID) that the browser stores. This gives us practice with CRUD endpoints and EF Core before the asynchronous work starts. It also means a cart survives page refreshes.
 
 ### 3.4 Prices looked up from Catalog over HTTP
 When an item is added to the cart, Orders calls the Catalog API through a typed `HttpClient` to get the book's current title and price. **The browser's price is never trusted.**
@@ -125,12 +129,12 @@ Everything you need to understand one use case sits together. We chose this over
 | Layer | Tool | What it proves |
 |---|---|---|
 | Unit | NUnit (+ `NServiceBus.Testing` for the saga) | Logic in isolation: fast, no infrastructure. |
-| Integration | Testcontainers | Our code against real RavenDB / SQL Server / RabbitMQ in throwaway Docker containers. |
+| Integration | Testcontainers | Our code against real RavenDB / PostgreSQL / RabbitMQ in throwaway Docker containers. |
 | End-to-end | Playwright | The whole system through a real browser: search → cart → checkout → confirmed → email. |
 
 ## 5. Local development
 
-- **During development:** infrastructure (RavenDB, SQL Server, RabbitMQ, Mailpit) runs in Docker Compose. The .NET services and Next.js run on the host with `dotnet run` / `npm run dev`, for fast debugging and hot reload.
+- **During development:** infrastructure (RavenDB, PostgreSQL, RabbitMQ, Mailpit) runs in Docker Compose. The .NET services and Next.js run on the host with `dotnet run` / `npm run dev`, for fast debugging and hot reload.
 - **From M7:** every service is containerised, and `docker compose up` starts the whole stack.
 
 ## 6. Repository conventions
@@ -145,7 +149,7 @@ Everything you need to understand one use case sits together. We chose this over
 | # | Decision | Chosen | Alternatives considered |
 |---|---|---|---|
 | 1 | Service split | Separate Catalog API, Orders API, Orders Worker | Modular monolith; fine-grained microservices |
-| 2 | Cart storage | Server-side, SQL Server | Browser localStorage; RavenDB |
+| 2 | Cart storage | Server-side, PostgreSQL | Browser localStorage; RavenDB |
 | 3 | Stock location | On the book document in RavenDB | Separate Inventory service |
 | 4 | Orders data access | EF Core | Dapper |
 | 5 | Status updates | Polling, then SignalR | SignalR/SSE from the start |
@@ -155,3 +159,4 @@ Everything you need to understand one use case sits together. We chose this over
 | 9 | Service naming | `Orders` (plural) | `Order` (namespace/class clash) |
 | 10 | Cart pricing | Orders calls Catalog over HTTP | Local catalog copy synced through events |
 | 11 | Git workflow | Branch per milestone + PR | Commit directly to `main` |
+| 12 | Orders database | PostgreSQL (native arm64, lightweight). The scope originally said SQL Server; an optional final step switches the provider to practise SQL Server. | SQL Server under Rosetta (heavy on Apple Silicon); SQLite (no NServiceBus outbox/saga support); MySQL (community EF Core provider lags releases) |
