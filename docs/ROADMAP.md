@@ -1,6 +1,6 @@
 # MiniKobo Roadmap
 
-Milestone plan for MiniKobo. The reasons behind each decision are in [ARCHITECTURE.md](ARCHITECTURE.md).
+Milestone plan for MiniKobo. The reasons behind each decision are in [ARCHITECTURE.md](ARCHITECTURE.md), and the concepts learned are in [LEARNING-NOTES.md](LEARNING-NOTES.md).
 
 **How we work**
 - Each milestone has its own branch and is merged into `main` through a pull request.
@@ -24,10 +24,10 @@ Concepts: solution/project structure, NuGet and Central Package Management, Dock
 ## M1 – Catalog API (RavenDB)
 Branch: `m1-catalog-api`
 
-- [ ] Create `MiniKobo.Catalog.Api` (Minimal APIs) and add it to the solution
-- [ ] Register the RavenDB `DocumentStore` in DI, with a session per request
-- [ ] `Book` document and seed data
-- [ ] `GET /books` (paged) and `GET /books/{id}`
+- [x] Create `MiniKobo.Catalog.Api` (Minimal APIs) and add it to the solution
+- [x] Register the RavenDB `DocumentStore` in DI, with a session per request
+- [x] `Book` document and seed data
+- [x] `GET /books` (paged) and `GET /books/{isbn}`
 - [ ] Full-text search index and `GET /books?search=…`
 - [ ] Configuration (`appsettings.json`, environment variables) and `ProblemDetails` errors
 - [ ] NUnit unit tests project

@@ -12,9 +12,10 @@ public static class GetBooks
     public static RouteHandlerBuilder MapGetBooks(this IEndpointRouteBuilder app) =>
         app.MapGet("/", HandleAsync);
 
-    public static async Task<Results<Ok<PagedResponse<BookResponse>>, ValidationProblem>> HandleAsync(
+        public static async Task<Results<Ok<PagedResponse<BookResponse>>, ValidationProblem>> HandleAsync(
         IAsyncDocumentSession session,
         CancellationToken cancellationToken,
+        string? search = null,
         int page = 1,
         int pageSize = 20)
     {
@@ -26,11 +27,19 @@ public static class GetBooks
             });
         }
 
-        var books = await session.Query<Book>()
-            .Statistics(out var stats)
-            .OrderBy(book => book.Title)
+        var query = session.Query<Books_Search.Result, Books_Search>()
+            .Statistics(out var stats);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Search(result => result.Query, search);
+        }
+
+        var books = await query
+            .OrderBy(result => result.Title)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            .OfType<Book>()
             .ToListAsync(cancellationToken);
 
         var items = books.Select(BookResponse.FromBook).ToList();

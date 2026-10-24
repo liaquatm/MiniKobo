@@ -4,6 +4,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.Documents.Indexes;
 
 namespace MiniKobo.Catalog.Api.Data;
 
@@ -27,6 +28,7 @@ public static class RavenDbServiceCollectionExtensions
             };
             store.Initialize();
             EnsureDatabaseExists(store);
+            IndexCreation.CreateIndexes(typeof(RavenDbServiceCollectionExtensions).Assembly, store);
 
             return store;
         });
