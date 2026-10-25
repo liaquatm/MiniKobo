@@ -142,6 +142,8 @@ Everything you need to understand one use case sits together. We chose this over
 - `Directory.Build.props`: settings shared by all projects (target framework, nullable, warnings as errors).
 - `Directory.Packages.props`: Central Package Management (all NuGet versions in one place).
 - `.editorconfig`: code style.
+- `tests/Directory.Build.props`: imports the root file and adds the NUnit packages to every test project.
+- Projects live in `src/`, tests in `tests/`, with one `*.UnitTests` and one `*.IntegrationTests` project per service.
 - **Git:** one branch per milestone (for example `m1-catalog-api`), merged into `main` through a pull request. Each PR is the review checkpoint for that milestone.
 
 ## Decision log

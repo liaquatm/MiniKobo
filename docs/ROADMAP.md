@@ -1,6 +1,6 @@
 # MiniKobo Roadmap
 
-Milestone plan for MiniKobo. The reasons behind each decision are in [ARCHITECTURE.md](ARCHITECTURE.md).
+Milestone plan for MiniKobo. The reasons behind each decision are in [ARCHITECTURE.md](ARCHITECTURE.md), and the concepts learned are in [LEARNING-NOTES.md](LEARNING-NOTES.md).
 
 **How we work**
 - Each milestone has its own branch and is merged into `main` through a pull request.
@@ -17,21 +17,21 @@ Branch: `m0-foundations`
 - [x] Solution-wide settings: `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig`
 - [x] `docker-compose.yml` with RavenDB, PostgreSQL, RabbitMQ and Mailpit; secrets in `.env` (git-ignored) with a committed `.env.example`
 - [x] Open each tool's web UI to confirm it is running
-- [ ] **Review checkpoint**
+- [x] **Review checkpoint** (skipped by choice)
 
 Concepts: solution/project structure, NuGet and Central Package Management, Docker Compose basics.
 
 ## M1 – Catalog API (RavenDB)
 Branch: `m1-catalog-api`
 
-- [ ] Create `MiniKobo.Catalog.Api` (Minimal APIs) and add it to the solution
-- [ ] Register the RavenDB `DocumentStore` in DI, with a session per request
-- [ ] `Book` document and seed data
-- [ ] `GET /books` (paged) and `GET /books/{id}`
-- [ ] Full-text search index and `GET /books?search=…`
-- [ ] Configuration (`appsettings.json`, environment variables) and `ProblemDetails` errors
-- [ ] NUnit unit tests project
-- [ ] Testcontainers integration test against RavenDB
+- [x] Create `MiniKobo.Catalog.Api` (Minimal APIs) and add it to the solution
+- [x] Register the RavenDB `DocumentStore` in DI, with a session per request
+- [x] `Book` document and seed data
+- [x] `GET /books` (paged) and `GET /books/{isbn}`
+- [x] Full-text search index and `GET /books?search=…`
+- [x] Configuration (`appsettings.json`, environment variables) and `ProblemDetails` errors
+- [x] NUnit unit tests project
+- [x] Testcontainers integration test against RavenDB
 - [ ] **Review checkpoint**
 
 Concepts: ASP.NET Core startup pipeline, DI lifetimes, document modelling, indexes.
