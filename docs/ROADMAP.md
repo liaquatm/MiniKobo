@@ -28,10 +28,10 @@ Branch: `m1-catalog-api`
 - [x] Register the RavenDB `DocumentStore` in DI, with a session per request
 - [x] `Book` document and seed data
 - [x] `GET /books` (paged) and `GET /books/{isbn}`
-- [ ] Full-text search index and `GET /books?search=…`
-- [ ] Configuration (`appsettings.json`, environment variables) and `ProblemDetails` errors
-- [ ] NUnit unit tests project
-- [ ] Testcontainers integration test against RavenDB
+- [x] Full-text search index and `GET /books?search=…`
+- [x] Configuration (`appsettings.json`, environment variables) and `ProblemDetails` errors
+- [x] NUnit unit tests project
+- [x] Testcontainers integration test against RavenDB
 - [ ] **Review checkpoint**
 
 Concepts: ASP.NET Core startup pipeline, DI lifetimes, document modelling, indexes.

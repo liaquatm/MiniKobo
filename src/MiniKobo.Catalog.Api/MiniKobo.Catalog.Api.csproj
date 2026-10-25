@@ -2,4 +2,8 @@
   <ItemGroup>
     <PackageReference Include="RavenDB.Client" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="MiniKobo.Catalog.Api.UnitTests" />
+  </ItemGroup>
 </Project>

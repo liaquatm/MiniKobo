@@ -20,7 +20,7 @@ public static class CatalogSeeder
         await session.SaveChangesAsync(cancellationToken);
     }
 
-    private static Book[] CreateSeedBooks() =>
+    internal static Book[] CreateSeedBooks() =>
     [
         Create("9780000000001", "Pride and Prejudice", "Jane Austen", 8.99m, 25,
             "Elizabeth Bennet trades sharp words with the proud Mr Darcy in Regency England."),

@@ -89,3 +89,31 @@ Top-level statements mean there's no `Main` method; the compiler generates it, a
 - **Paging:** always use a fixed sort order, cap the page size, and return the total count (RavenDB `Statistics(out var stats)`).
 - **ProblemDetails (RFC 9457):** the standard JSON shape for errors. `TypedResults.ValidationProblem(...)` returns 400 with field errors.
 - **JSON uses camelCase by default**, regardless of PascalCase C# names.
+
+### Middleware and consistent errors
+- **Middleware is an onion:** each one wraps everything registered after it. A request goes in through each layer, and the response comes back out in reverse. **Order matters**, which is why the exception handler goes first.
+- `AddProblemDetails()` + `UseExceptionHandler()` + `UseStatusCodePages()` make **every** error (validation, 404, unhandled exception) use the same ProblemDetails JSON. Exception details go to the logs, never to the caller.
+
+### RavenDB indexes and search
+- **Static index** (`AbstractIndexCreationTask`): `Map` picks the fields to index. It runs on the **server**. `Books_Search` becomes `Books/Search`.
+- **`FieldIndexing.Search`** runs text through an **analyzer** (split into words, lowercased), so search matches single words and ignores case.
+- **`IndexCreation.CreateIndexes(assembly, store)`** deploys every index class at startup, and does nothing if they're unchanged.
+- **Deferred execution:** a LINQ query is only a description until `ToListAsync()`, so conditions can be added step by step.
+- **Eventual consistency:** indexes catch up in the background, so a query straight after a write can be **stale**. Fast answers are traded for up-to-date ones. Loads by ID are always current. Tests must wait for indexing.
+
+### Testing strategy
+| | Unit tests | Integration tests |
+|---|---|---|
+| Tests | pure logic, in isolation | our code + real infrastructure + the HTTP pipeline |
+| Speed | milliseconds | seconds (container start) |
+| Needs Docker | no | yes |
+| Catches | logic bugs | wiring, config, queries, serialisation, status codes |
+
+- **Separate projects** (`*.UnitTests`, `*.IntegrationTests`) so the fast tests can run on their own (in CI, or before every commit).
+- **An API that mostly does I/O has little pure logic.** Most of its value is tested at the integration level. Don't invent complexity to "have unit tests".
+- **Design for testability:** pulling logic out of I/O code (`ValidatePaging`) makes it testable without a database.
+- **`InternalsVisibleTo`** lets a test project see `internal` members without making them `public`.
+- **`WebApplicationFactory<Program>`** runs the **real** API in memory, with the real `Program.cs`, DI and middleware, and gives you an `HttpClient` to call it. `UseSetting` overrides configuration, just like an environment variable.
+- **Testcontainers** starts a throwaway Docker container per test run, so you test against the real database version, and every run starts clean.
+- **NUnit:** `[TestFixture]` is a class of tests, `[Test]` a single test, and `[TestCase(...)]` one test run with several inputs. `[OneTimeSetUp]`/`[OneTimeTearDown]` run once per fixture, which is used for expensive things like containers. Assertions use the constraint model: `Assert.That(actual, Is.EqualTo(expected))`. `Assert.Multiple` reports every failing assertion, not just the first.
+- **Nested `Directory.Build.props`:** MSBuild only picks up the *nearest* one, so `tests/Directory.Build.props` imports the root one explicitly and then adds the test packages for every test project.
