@@ -111,9 +111,55 @@ Top-level statements mean there's no `Main` method; the compiler generates it, a
 
 - **Separate projects** (`*.UnitTests`, `*.IntegrationTests`) so the fast tests can run on their own (in CI, or before every commit).
 - **An API that mostly does I/O has little pure logic.** Most of its value is tested at the integration level. Don't invent complexity to "have unit tests".
-- **Design for testability:** pulling logic out of I/O code (`ValidatePaging`) makes it testable without a database.
+- **Design for testability ("functional core, imperative shell"):** keep pure logic (plain inputs and outputs) separate from I/O (database, network). `ValidatePaging(int, int)` needs no database, so it gets fast unit tests. `HandleAsync` needs a session, so it's covered by integration tests. Testing logic buried in I/O code means `null!` hacks or large mocks.
 - **`InternalsVisibleTo`** lets a test project see `internal` members without making them `public`.
-- **`WebApplicationFactory<Program>`** runs the **real** API in memory, with the real `Program.cs`, DI and middleware, and gives you an `HttpClient` to call it. `UseSetting` overrides configuration, just like an environment variable.
+- **`WebApplicationFactory<Program>`** runs the **real** API in memory, with the real `Program.cs`, DI and middleware, and gives you an `HttpClient` to call it. `UseSetting` overrides configuration, just like an environment variable. It runs in the **`Development` environment by default**, which is why our dev-only seeder fills the test database. When integration tests behave strangely, check which environment the app is running in.
 - **Testcontainers** starts a throwaway Docker container per test run, so you test against the real database version, and every run starts clean.
 - **NUnit:** `[TestFixture]` is a class of tests, `[Test]` a single test, and `[TestCase(...)]` one test run with several inputs. `[OneTimeSetUp]`/`[OneTimeTearDown]` run once per fixture, which is used for expensive things like containers. Assertions use the constraint model: `Assert.That(actual, Is.EqualTo(expected))`. `Assert.Multiple` reports every failing assertion, not just the first.
 - **Nested `Directory.Build.props`:** MSBuild only picks up the *nearest* one, so `tests/Directory.Build.props` imports the root one explicitly and then adds the test packages for every test project.
+
+---
+
+## M2 – Orders API (PostgreSQL, EF Core, controllers)
+
+### What EF Core is
+- **The problem:** code works with **objects**, and the database stores **tables**. Something has to translate between them. By hand, that means SQL strings plus copying every column into objects and back, for every query.
+- **EF Core is an ORM (Object-Relational Mapper):** you query with LINQ on C# objects. EF Core **generates the SQL**, runs it, **builds the objects**, and on `SaveChangesAsync()` works out the `INSERT`/`UPDATE`/`DELETE` statements itself. (Dapper, the lighter alternative, only maps results to objects; you still write the SQL.)
+- **Unity comparison:** like Unity serialising your fields to scene files without you writing the file format, but with a database instead of files.
+
+| Piece | What it is | Ours |
+|---|---|---|
+| Entities | The classes that get stored | `Cart`, `CartItem` |
+| `DbContext` | Queries and saves, and tracks changes (unit of work) | `OrdersDbContext` |
+| Mapping | How classes become tables (names, keys, lengths) | `OnModelCreating` |
+| Provider | Speaks one database's SQL dialect | `UseNpgsql` |
+
+- **Migrations are version control for the database's structure:** ordered C# files, each describing one schema change (`Up` applies, `Down` reverses), committed to git. Any database can be brought up to date by applying the ones it hasn't had (tracked in `__EFMigrationsHistory`).
+- **The library vs the tool:** **EF Core** (the library) runs inside the app. **`dotnet ef`** is a separate developer tool for migrations. To read the model, it builds the project and runs the app's setup code to get the `DbContext`. That's why the app's configuration must work, for example a connection string must be present, even though `migrations add` doesn't connect to the database.
+- **Never edit an applied migration.** The database has already recorded it as applied and will skip it, and databases would drift apart. Add a new migration instead, the same rule as never amending pushed git commits.
+
+### Tooling and secrets
+- **Local .NET tools** (`dotnet-tools.json` at the repo root): command-line tools pinned per repo. `dotnet tool restore` installs them on any machine or in CI.
+- **EF Core packages must share a major version** with each other and with .NET (all 10.x here). The `Design` package is a development-time dependency (`PrivateAssets=all`).
+- **User secrets:** `dotnet user-secrets init` adds a `UserSecretsId` to the `.csproj`. Values are stored in `~/.microsoft/usersecrets/<id>/secrets.json`, outside the repo. In `Development` they become another configuration layer that overrides `appsettings.json`. Use them for local passwords and connection strings.
+
+### EF Core basics
+- **`DbContext` is the unit of work** (like RavenDB's session): it tracks loaded entities, and `SaveChangesAsync()` writes the changes in one transaction. `AddDbContext` registers it as scoped.
+- **Provider:** `UseNpgsql(...)` decides which database the SQL is written for. Most of the rest of the code doesn't depend on the database.
+- **Fluent API mapping** in `OnModelCreating`: `ToTable`, `HasKey`, `HasMany().WithOne().HasForeignKey()`, `HasMaxLength`, `HasPrecision`. It keeps database concerns out of the entity classes.
+- **Conventions vs explicit config:** EF names a table after the `DbSet` property if there is one, otherwise after the class. That produced `carts` and `cart_item`, so we set names explicitly with `ToTable`. Be explicit wherever a convention gives a surprising result.
+- **A composite key** (`HasKey(i => new { i.CartId, i.Isbn })`) makes the database enforce a uniqueness rule: one row per book per cart.
+- **Aggregates (DDD):** expose only the root (`DbSet<Cart>`). Child entities (`CartItem`) are reached and changed only through the root, so its rules can't be bypassed.
+
+### Rich domain model
+- **Entities protect their own state:** private setters, a private `List<T>` field exposed as `IReadOnlyList<T>`. Changes go through methods that enforce the rules.
+- **EF Core still works with this:** it uses constructors whose parameter names match properties, sets private setters, and fills backing fields (`Items` → `_items`) by convention.
+- **Snapshot data:** a cart item copies the title and price at the time it's added. It's checked again at checkout, because a stored price is never trusted for payment.
+- **IDs and time:** a `Guid` cart ID can't be guessed (unlike 1, 2, 3). `DateTimeOffset` maps to `timestamptz` and avoids `DateTime`'s time-zone ambiguity.
+
+### Migrations
+- **`dotnet ef migrations add <Name>`** compares the model with the last **snapshot** and generates C# with `Up()` (apply) and `Down()` (reverse). It builds and starts the app's host to read the model, but doesn't touch the database.
+- **`dotnet ef database update`** applies pending migrations. Applied migrations are recorded in the `__EFMigrationsHistory` table.
+- **Review the generated migration before applying it.** That's where we caught the inconsistent table name.
+- **`dotnet ef migrations remove`** deletes the latest migration **if it hasn't been applied**. Once a migration has been applied or shared, never edit it; add a new migration instead.
+- Commit the migrations **and** the `ModelSnapshot` file.

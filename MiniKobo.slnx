@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/MiniKobo.Catalog.Api/MiniKobo.Catalog.Api.csproj" />
+    <Project Path="src/MiniKobo.Orders.Api/MiniKobo.Orders.Api.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/MiniKobo.Catalog.Api.IntegrationTests/MiniKobo.Catalog.Api.IntegrationTests.csproj" />

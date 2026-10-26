@@ -32,15 +32,15 @@ Branch: `m1-catalog-api`
 - [x] Configuration (`appsettings.json`, environment variables) and `ProblemDetails` errors
 - [x] NUnit unit tests project
 - [x] Testcontainers integration test against RavenDB
-- [ ] **Review checkpoint**
+- [x] **Review checkpoint** (quiz)
 
 Concepts: ASP.NET Core startup pipeline, DI lifetimes, document modelling, indexes.
 
 ## M2 – Orders API part 1: cart (PostgreSQL, EF Core)
 Branch: `m2-orders-cart`
 
-- [ ] Create `MiniKobo.Orders.Api`
-- [ ] `OrdersDbContext` (Npgsql provider, `snake_case` naming) with `Cart` / `CartItem` entities and the first migration
+- [x] Create `MiniKobo.Orders.Api` (controller-based Web API)
+- [x] `OrdersDbContext` (Npgsql provider, `snake_case` naming) with `Cart` / `CartItem` entities and the first migration
 - [ ] `POST /carts`, `GET /carts/{id}`
 - [ ] `PUT /carts/{id}/items/{bookId}` (set quantity), `DELETE /carts/{id}/items/{bookId}`
 - [ ] Typed `HttpClient` to the Catalog API for title and price
@@ -89,6 +89,19 @@ Branch: `m5-frontend`
 - [ ] **Review checkpoint**
 
 Concepts: React components, server vs client components, TypeScript types for API DTOs.
+
+## M5b – Customer accounts (ASP.NET Core Identity)
+Branch: `m5b-accounts`
+
+- [ ] ASP.NET Core Identity in the Orders API (`MapIdentityApi`), with users stored in PostgreSQL through EF Core
+- [ ] Register, login and logout, and protect endpoints with `[Authorize]`
+- [ ] Link carts and orders to the signed-in customer, and merge a guest cart into the account on login
+- [ ] Keep guest checkout working
+- [ ] Frontend: login and register pages, and a "My orders" page
+- [ ] Tests with and without a signed-in user
+- [ ] **Review checkpoint**
+
+Concepts: authentication vs authorisation, cookies vs bearer tokens, claims, password hashing.
 
 ## M6 – End-to-end testing
 Branch: `m6-e2e-tests`
