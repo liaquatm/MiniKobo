@@ -18,4 +18,13 @@ public sealed class CartItem
     public string Title { get; private set; }
     public decimal UnitPrice { get; private set; }
     public int Quantity { get; private set; }
+    public decimal LineTotal => UnitPrice * Quantity;
+
+    // Only Cart should call this; it validates the quantity first.
+    internal void Update(string title, decimal unitPrice, int quantity)
+    {
+        Title = title;
+        UnitPrice = unitPrice;
+        Quantity = quantity;
+    }
 }

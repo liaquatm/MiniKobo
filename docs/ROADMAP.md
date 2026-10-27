@@ -41,10 +41,10 @@ Branch: `m2-orders-cart`
 
 - [x] Create `MiniKobo.Orders.Api` (controller-based Web API)
 - [x] `OrdersDbContext` (Npgsql provider, `snake_case` naming) with `Cart` / `CartItem` entities and the first migration
-- [ ] `POST /carts`, `GET /carts/{id}`
-- [ ] `PUT /carts/{id}/items/{bookId}` (set quantity), `DELETE /carts/{id}/items/{bookId}`
-- [ ] Typed `HttpClient` to the Catalog API for title and price
-- [ ] Request validation
+- [x] `POST /carts`, `GET /carts/{id}`
+- [x] `PUT /carts/{id}/items/{isbn}` (set quantity), `DELETE /carts/{id}/items/{isbn}`
+- [x] Typed `HttpClient` to the Catalog API for title, price and stock, with a standard resilience handler
+- [x] Request validation
 - [ ] Unit tests and a PostgreSQL Testcontainers integration test
 - [ ] **Review checkpoint**
 

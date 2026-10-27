@@ -163,3 +163,38 @@ Top-level statements mean there's no `Main` method; the compiler generates it, a
 - **Review the generated migration before applying it.** That's where we caught the inconsistent table name.
 - **`dotnet ef migrations remove`** deletes the latest migration **if it hasn't been applied**. Once a migration has been applied or shared, never edit it; add a new migration instead.
 - Commit the migrations **and** the `ModelSnapshot` file.
+- **`dotnet ef migrations has-pending-model-changes`** checks whether the model has changed since the last migration. Computed get-only properties (`Total`, `LineTotal`) aren't mapped, so they need no migration.
+
+### Controllers (vs Minimal APIs)
+| | Minimal APIs (Catalog) | Controllers (Orders) |
+|---|---|---|
+| Registration | `MapGet(...)` per endpoint | `AddControllers()` + `MapControllers()` discover classes |
+| Routes | In the `Map` call | Attributes: `[Route("carts")]` on the class, `[HttpPut("{cartId:guid}/items/{isbn}")]` on actions |
+| Dependencies | Handler parameters | Constructor (here a primary constructor), shared by all actions |
+| Results | `TypedResults.Ok(...)`, `Results<...>` | `ActionResult<T>`: return a `T` (200) or a helper such as `NotFound()`, `Problem(...)`, `NoContent()`, `CreatedAtAction(...)` |
+| Validation | Manual | **`[ApiController]` validates automatically** and returns 400 ProblemDetails before the action runs |
+
+- **`[ApiController]`** also infers binding sources: complex types come from the **body**, and simple types from the route or query string.
+- **Route constraints** (`{cartId:guid}`): a value that isn't a GUID doesn't match the route, so the result is a 404 and the action never runs.
+- **`CreatedAtAction(nameof(GetCart), new { cartId }, body)`** returns 201 with a `Location` header built from another action's route. `nameof` keeps it refactor-safe. Avoid an `Async` suffix on action names, because MVC trims it by default and `CreatedAtAction` then can't find the action.
+- **Data annotations on records:** put attributes on the constructor parameter (`[Range(1, 10)] int Quantity`).
+- **`Include(cart => cart.Items)`** is **eager loading**. EF loads related data only when asked, and without it `Items` would be empty.
+
+### HTTP status codes used
+- **201** created (with `Location`), **204** success with no body, **400** malformed or invalid request.
+- **404** not found. Use a distinct `title` when several things could be missing (cart vs book vs item).
+- **409 Conflict**: valid request, but it conflicts with the current state (not enough stock).
+- **503 Service Unavailable**: a dependency is down, so try again later.
+
+### Calling another service
+- **Typed `HttpClient`** (`AddHttpClient<ICatalogClient, CatalogClient>`): **`IHttpClientFactory`** creates and pools the underlying connections. Never `new HttpClient()` per request, which exhausts sockets.
+- **An interface (`ICatalogClient`)** lets tests substitute a fake.
+- **Each service has its own copy of the data it reads** (`CatalogBook`, with only the fields it needs). There's no shared code between services, so each can change and deploy independently. Extra JSON fields are ignored.
+- **Translate failures at the boundary:** the client turns network problems into a `CatalogUnavailableException`, and the controller turns that into a 503. Callers don't deal with HTTP details.
+- **Resilience (`AddStandardResilienceHandler`, built on Polly):** retries with exponential backoff and jitter for brief failures, timeouts, and a **circuit breaker** that stops calling a failing service for a while so it can recover. A 404 isn't retried, because retrying can't fix it. It's only safe to retry operations that can be repeated without harm (a GET).
+
+### Testable time and logging
+- **`TimeProvider`** (registered as `TimeProvider.System`): inject the clock instead of calling `DateTimeOffset.UtcNow`, so tests can control "now".
+- **`Guid.CreateVersion7()`**: GUIDs that start with a timestamp, so they sort by creation time. That's kinder to database indexes than random GUIDs.
+- **Structured logging:** `logger.LogWarning(ex, "… {Isbn} … {CartId}", isbn, cartId)`. The placeholders become **named fields**, which can be searched in log tools ("all failures for cart X"). Don't build the message with string interpolation.
+- **Defence in depth:** the controller validates the quantity (400), and `Cart` checks it again (it throws). The entity protects its own rules whoever calls it.
