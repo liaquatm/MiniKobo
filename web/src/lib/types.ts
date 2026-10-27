@@ -30,6 +30,19 @@ export type Cart = {
   total: number;
 };
 
+export type OrderStatus = "Placed" | "StockReserved" | "Paid" | "Confirmed" | "Failed";
+
+export type Order = {
+  id: string;
+  status: OrderStatus;
+  failureReason: string | null;
+  customerName: string;
+  customerEmail: string;
+  items: CartItem[];
+  total: number;
+  createdAt: string;
+};
+
 // RFC 9457 ProblemDetails, the error shape both APIs use.
 export type ProblemDetails = {
   title?: string;

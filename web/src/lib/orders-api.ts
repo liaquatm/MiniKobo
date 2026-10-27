@@ -1,4 +1,4 @@
-import type { Cart, ProblemDetails } from "./types";
+import type { Cart, Order, ProblemDetails } from "./types";
 
 // Browser-side calls to the Orders API, through the /api/orders rewrite in next.config.ts.
 
@@ -39,4 +39,12 @@ export const ordersApi = {
 
   removeItem: (cartId: string, isbn: string) =>
     request<void>(`/carts/${cartId}/items/${encodeURIComponent(isbn)}`, { method: "DELETE" }),
+
+  placeOrder: (cartId: string, customerName: string, customerEmail: string) =>
+    request<{ orderId: string }>("/orders", {
+      method: "POST",
+      body: JSON.stringify({ cartId, customerName, customerEmail }),
+    }),
+
+  getOrder: (orderId: string) => request<Order>(`/orders/${orderId}`),
 };
