@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="NServiceBus" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="NServiceBus" />
+  </ItemGroup>
+</Project>

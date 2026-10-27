@@ -74,6 +74,81 @@ namespace MiniKobo.Orders.Api.Data.Migrations
                     b.ToTable("cart_items", (string)null);
                 });
 
+            modelBuilder.Entity("MiniKobo.Orders.Api.Features.Orders.Order", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CustomerEmail")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("customer_email");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("customer_name");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("failure_reason");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_orders");
+
+                    b.ToTable("orders", (string)null);
+                });
+
+            modelBuilder.Entity("MiniKobo.Orders.Api.Features.Orders.OrderItem", b =>
+                {
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<string>("Isbn")
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)")
+                        .HasColumnName("isbn");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("title");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("unit_price");
+
+                    b.HasKey("OrderId", "Isbn")
+                        .HasName("pk_order_items");
+
+                    b.ToTable("order_items", (string)null);
+                });
+
             modelBuilder.Entity("MiniKobo.Orders.Api.Features.Carts.CartItem", b =>
                 {
                     b.HasOne("MiniKobo.Orders.Api.Features.Carts.Cart", null)
@@ -84,7 +159,22 @@ namespace MiniKobo.Orders.Api.Data.Migrations
                         .HasConstraintName("fk_cart_items_carts_cart_id");
                 });
 
+            modelBuilder.Entity("MiniKobo.Orders.Api.Features.Orders.OrderItem", b =>
+                {
+                    b.HasOne("MiniKobo.Orders.Api.Features.Orders.Order", null)
+                        .WithMany("Items")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_order_items_orders_order_id");
+                });
+
             modelBuilder.Entity("MiniKobo.Orders.Api.Features.Carts.Cart", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("MiniKobo.Orders.Api.Features.Orders.Order", b =>
                 {
                     b.Navigation("Items");
                 });

@@ -1,11 +1,14 @@
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using MiniKobo.Orders.Api.Clients.Catalog;
 using MiniKobo.Orders.Api.Data;
+using MiniKobo.Orders.Api.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddDbContext<OrdersDbContext>(options => options
@@ -14,6 +17,7 @@ builder.Services.AddDbContext<OrdersDbContext>(options => options
     .UseSnakeCaseNamingConvention());
 
 builder.Services.AddCatalogClient();
+builder.Services.AddOrdersEndpoint(builder.Configuration);
 
 var app = builder.Build();
 

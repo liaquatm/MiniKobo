@@ -22,6 +22,7 @@ public sealed class CatalogApiFactory : WebApplicationFactory<Program>
         // Overrides appsettings.json, exactly like an environment variable would.
         builder.UseSetting("RavenDb:Urls:0", _ravenDb.GetConnectionString());
         builder.UseSetting("RavenDb:Database", "MiniKobo.Catalog.Tests");
+        builder.UseSetting("Messaging:Enabled", "false"); // these tests cover HTTP only
     }
 
     /// <summary>
