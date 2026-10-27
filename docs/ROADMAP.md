@@ -2,6 +2,8 @@
 
 Milestone plan for MiniKobo. The reasons behind each decision are in [ARCHITECTURE.md](ARCHITECTURE.md), and the concepts learned are in [LEARNING-NOTES.md](LEARNING-NOTES.md).
 
+**Status (2026-10-27):** M0–M6 built in a fast track (fewer review checkpoints) and working end to end; CI added. Remaining: M5b, containerising the services (M7), M8.
+
 **How we work**
 - Each milestone has its own branch and is merged into `main` through a pull request.
 - Each milestone ends with a **review checkpoint**: we walk through the code and concepts before moving on.
@@ -32,20 +34,20 @@ Branch: `m1-catalog-api`
 - [x] Configuration (`appsettings.json`, environment variables) and `ProblemDetails` errors
 - [x] NUnit unit tests project
 - [x] Testcontainers integration test against RavenDB
-- [ ] **Review checkpoint**
+- [x] **Review checkpoint** (quiz)
 
 Concepts: ASP.NET Core startup pipeline, DI lifetimes, document modelling, indexes.
 
 ## M2 – Orders API part 1: cart (PostgreSQL, EF Core)
 Branch: `m2-orders-cart`
 
-- [ ] Create `MiniKobo.Orders.Api`
-- [ ] `OrdersDbContext` (Npgsql provider, `snake_case` naming) with `Cart` / `CartItem` entities and the first migration
-- [ ] `POST /carts`, `GET /carts/{id}`
-- [ ] `PUT /carts/{id}/items/{bookId}` (set quantity), `DELETE /carts/{id}/items/{bookId}`
-- [ ] Typed `HttpClient` to the Catalog API for title and price
-- [ ] Request validation
-- [ ] Unit tests and a PostgreSQL Testcontainers integration test
+- [x] Create `MiniKobo.Orders.Api` (controller-based Web API)
+- [x] `OrdersDbContext` (Npgsql provider, `snake_case` naming) with `Cart` / `CartItem` entities and the first migration
+- [x] `POST /carts`, `GET /carts/{id}`
+- [x] `PUT /carts/{id}/items/{isbn}` (set quantity), `DELETE /carts/{id}/items/{isbn}`
+- [x] Typed `HttpClient` to the Catalog API for title, price and stock, with a standard resilience handler
+- [x] Request validation
+- [x] Unit tests and a PostgreSQL Testcontainers integration test
 - [ ] **Review checkpoint**
 
 Concepts: EF Core change tracking and migrations, `HttpClientFactory`, validation.
@@ -53,12 +55,12 @@ Concepts: EF Core change tracking and migrations, `HttpClientFactory`, validatio
 ## M3 – Checkout and messaging foundations
 Branch: `m3-checkout-messaging`
 
-- [ ] Create `MiniKobo.Contracts` with the message classes
-- [ ] NServiceBus in the Orders API: RabbitMQ transport, SQL persistence (PostgreSQL dialect), outbox
-- [ ] `Order` entity and migration
-- [ ] `POST /orders`: cart → `Order` (status `Placed`) and publish `OrderPlaced`
-- [ ] `GET /orders/{id}` for status
-- [ ] A temporary logging handler; watch the message in the RabbitMQ UI
+- [x] Create `MiniKobo.Contracts` with the message classes
+- [x] NServiceBus in the Orders API: RabbitMQ transport, SQL persistence (PostgreSQL dialect), outbox
+- [x] `Order` entity and migration
+- [x] `POST /orders`: cart → `Order` (status `Placed`) and publish `OrderPlaced`
+- [x] `GET /orders/{id}` for status
+- [x] ~~A temporary logging handler~~ (went straight to the real handlers)
 - [ ] **Review checkpoint**
 
 Concepts: queues and exchanges, commands vs events, the outbox pattern.
@@ -66,13 +68,13 @@ Concepts: queues and exchanges, commands vs events, the outbox pattern.
 ## M4 – Order-processing saga
 Branch: `m4-order-saga`
 
-- [ ] Create `MiniKobo.Orders.Worker` hosting `OrderProcessingSaga`
-- [ ] Catalog API as an NServiceBus endpoint: `ReserveStock` / `ReleaseStock` handlers using optimistic concurrency
-- [ ] Simulated payment with a configurable failure rate
-- [ ] `SendConfirmationEmail` handler sending SMTP to Mailpit
-- [ ] Order status updated at each step, with compensation on failure
-- [ ] Retries, error queue, and idempotent handlers
-- [ ] Saga unit tests with `NServiceBus.Testing`
+- [x] Create `MiniKobo.Orders.Worker` hosting `OrderProcessingSaga`
+- [x] Catalog API as an NServiceBus endpoint: `ReserveStock` / `ReleaseStock` handlers using optimistic concurrency
+- [x] Simulated payment (an email containing `+fail` is declined, for demos)
+- [x] `SendConfirmationEmail` handler sending SMTP to Mailpit
+- [x] Order status updated at each step, with compensation on failure
+- [x] Retries, error queue, and idempotent handlers
+- [x] Saga unit tests with `NServiceBus.Testing`
 - [ ] **Review checkpoint**
 
 Concepts: sagas, compensation, at-least-once delivery, eventual consistency.
@@ -80,31 +82,44 @@ Concepts: sagas, compensation, at-least-once delivery, eventual consistency.
 ## M5 – Next.js frontend
 Branch: `m5-frontend`
 
-- [ ] Create the Next.js (App Router, TypeScript) app in `web/`
-- [ ] Decide: browser calls the APIs directly (CORS) or through Next.js server code
-- [ ] Catalog page with search, and a book details page
-- [ ] Cart page (change quantities, remove items)
-- [ ] Checkout form (name and email)
-- [ ] Order status page with polling
+- [x] Create the Next.js (App Router, TypeScript) app in `web/`
+- [x] Decided: Next.js rewrites proxy `/api/*` to the APIs (one origin, no CORS)
+- [x] Catalog page with search, and a book details page
+- [x] Cart page (change quantities, remove items)
+- [x] Checkout form (name and email)
+- [x] Order status page with polling
 - [ ] **Review checkpoint**
 
 Concepts: React components, server vs client components, TypeScript types for API DTOs.
 
+## M5b – Customer accounts (ASP.NET Core Identity)
+Branch: `m5b-accounts`
+
+- [ ] ASP.NET Core Identity in the Orders API (`MapIdentityApi`), with users stored in PostgreSQL through EF Core
+- [ ] Register, login and logout, and protect endpoints with `[Authorize]`
+- [ ] Link carts and orders to the signed-in customer, and merge a guest cart into the account on login
+- [ ] Keep guest checkout working
+- [ ] Frontend: login and register pages, and a "My orders" page
+- [ ] Tests with and without a signed-in user
+- [ ] **Review checkpoint**
+
+Concepts: authentication vs authorisation, cookies vs bearer tokens, claims, password hashing.
+
 ## M6 – End-to-end testing
 Branch: `m6-e2e-tests`
 
-- [ ] Playwright setup
-- [ ] Happy path: search → add to cart → checkout → `Confirmed` → email in Mailpit
-- [ ] (Optional) Unhappy path: payment fails and stock is released
+- [x] Playwright setup
+- [x] Happy path: search → add to cart → checkout → `Confirmed`
+- [x] (Optional) Unhappy path: payment fails and stock is released
 - [ ] Review the overall test strategy
 - [ ] **Review checkpoint**
 
 ## M7 – Containerisation and CI
 Branch: `m7-docker-ci`
 
-- [ ] Multi-stage Dockerfiles for each .NET service and for `web/`
-- [ ] The full stack starts with `docker compose up`
-- [ ] GitHub Actions: build → unit tests → integration tests → Playwright
+- [ ] Multi-stage Dockerfiles for each .NET service and for `web/` (deferred: `scripts/dev-up.sh` starts everything for now)
+- [ ] The full stack starts with `docker compose up` (deferred)
+- [x] GitHub Actions: build → unit tests → integration tests → Playwright
 - [ ] **Review checkpoint**
 
 Concepts: container images, CI pipelines, caching.

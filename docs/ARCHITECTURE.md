@@ -37,8 +37,8 @@ MiniKobo is a small online bookstore. Customers browse and search books, manage 
 
 | Project | Responsibility | Data store |
 |---|---|---|
-| `MiniKobo.Catalog.Api` | Books, search, stock levels. Also an NServiceBus endpoint handling stock reservation. | RavenDB |
-| `MiniKobo.Orders.Api` | Carts, placing orders, order status. | PostgreSQL (EF Core) |
+| `MiniKobo.Catalog.Api` | Books, search, stock levels. Also an NServiceBus endpoint handling stock reservation. Built with **Minimal APIs**. | RavenDB |
+| `MiniKobo.Orders.Api` | Carts, placing orders, order status. Built with **controllers**. | PostgreSQL (EF Core) |
 | `MiniKobo.Orders.Worker` | Hosts the order-processing saga: stock → payment → email. | PostgreSQL (saga state + outbox) |
 | `MiniKobo.Contracts` | Message classes (commands/events) shared between services. | – |
 | `web/` | Next.js + TypeScript frontend. | – |
@@ -102,25 +102,30 @@ The frontend first polls `GET /orders/{id}` every few seconds, which is simple a
 ### 3.9 Email via Mailpit
 The email handler sends real SMTP to a **Mailpit** container, a fake mail server with a web inbox. So we test real email-sending code without sending real email.
 
-### 3.10 Guest checkout, no authentication
-The customer provides a name and email at checkout. Authentication is out of scope, so the focus stays on the architecture.
+### 3.10 Guest checkout first, accounts later
+Until M5 the customer checks out as a guest, providing a name and email. That keeps the focus on the core flow: catalog, cart, checkout and the saga.
+
+**Customer accounts arrive in M5b** (decision #14), using ASP.NET Core Identity in the Orders API, once there's a frontend to log in to. The design already leaves room for it: carts are identified by a GUID that can later be linked to a user, and orders store the customer's email. Guest checkout stays available.
 
 ### 3.11 Code organised by feature (vertical slices)
-Inside each service, code is grouped by feature rather than by technical layer:
+Inside each service, code is grouped by feature rather than by technical layer. The Catalog API (Minimal APIs) uses one file per endpoint:
 
 ```
-MiniKobo.Orders.Api/
+MiniKobo.Catalog.Api/
   Features/
-    Carts/
-      AddCartItem.cs      // endpoint + request + handler for one use case
-      GetCart.cs
-    Orders/
-      PlaceOrder.cs
-      GetOrderStatus.cs
-  Data/
-    OrdersDbContext.cs
+    Books/
+      Book.cs             // the document
+      BookResponse.cs     // the response DTO
+      GetBooks.cs         // route + handler for one use case
+      GetBookByIsbn.cs
+      Books_Search.cs     // the search index
+      BookEndpoints.cs    // maps the feature's endpoints under /books
+  Data/                   // RavenDB setup and seeding
+  Common/                 // shared types such as PagedResponse
   Program.cs
 ```
+
+The Orders API uses controllers (decision #13), still grouped by feature. Its exact layout is decided in M2.
 
 Everything you need to understand one use case sits together. We chose this over Clean Architecture (separate Domain, Application and Infrastructure projects), which is common in enterprise .NET but too heavy for an app this size.
 
@@ -136,6 +141,13 @@ Everything you need to understand one use case sits together. We chose this over
 
 - **During development:** infrastructure (RavenDB, PostgreSQL, RabbitMQ, Mailpit) runs in Docker Compose. The .NET services and Next.js run on the host with `dotnet run` / `npm run dev`, for fast debugging and hot reload.
 - **From M7:** every service is containerised, and `docker compose up` starts the whole stack.
+
+**First-time setup on a new machine:**
+1. Copy `.env.example` to `.env` and set the passwords, then run `docker compose up -d`.
+2. Run `dotnet tool restore` to install the tools pinned in `dotnet-tools.json` (for example `dotnet-ef`).
+3. Store the Orders connection string in user secrets (never in git):
+   `dotnet user-secrets set "ConnectionStrings:Orders" "Host=localhost;Port=5432;Database=minikobo_orders;Username=minikobo;Password=<from .env>" --project src/MiniKobo.Orders.Api`
+4. Create the Orders tables: `dotnet ef database update --project src/MiniKobo.Orders.Api`.
 
 ## 6. Repository conventions
 
@@ -156,9 +168,17 @@ Everything you need to understand one use case sits together. We chose this over
 | 4 | Orders data access | EF Core | Dapper |
 | 5 | Status updates | Polling, then SignalR | SignalR/SSE from the start |
 | 6 | Email | SMTP to Mailpit | Log only |
-| 7 | Customers | Guest checkout, no auth | Accounts + auth |
+| 7 | Customers | Guest checkout (accounts added later; see #14) | Accounts + auth from the start |
 | 8 | Code structure | Feature folders | Clean Architecture |
 | 9 | Service naming | `Orders` (plural) | `Order` (namespace/class clash) |
 | 10 | Cart pricing | Orders calls Catalog over HTTP | Local catalog copy synced through events |
 | 11 | Git workflow | Branch per milestone + PR | Commit directly to `main` |
-| 12 | Orders database | PostgreSQL (native arm64, lightweight). The scope originally said SQL Server; an optional final step switches the provider to practise SQL Server. | SQL Server under Rosetta (heavy on Apple Silicon); SQLite (no NServiceBus outbox/saga support); MySQL (community EF Core provider lags releases) |
+| 12 | Orders database | PostgreSQL (native arm64, lightweight). The scope originally said SQL Server; an optional final step switches the provider to practise SQL Server. | SQL Server under Rosetta (heavy on Apple Silicon); SQLite (no NServiceBus outbox/saga support); MySQL (community EF Core provider lags releases). *Revisited 2026-10-25 against the target job description (which requires MSSQL): PostgreSQL kept; the optional SQL Server switch at the end of the roadmap remains.* |
+| 13 | Orders API style | Controllers (`[ApiController]`, `ControllerBase`), while Catalog keeps Minimal APIs. Deliberately different, to learn both styles; the job lists ASP.NET MVC/WebAPI. | Minimal APIs everywhere (consistent across services) |
+| 14 | Customer accounts | ASP.NET Core Identity in the Orders API, as milestone M5b after the frontend. Guest checkout stays. | Accounts now (would delay the saga work); an external identity provider such as Keycloak with OpenID Connect (more realistic for microservices, but much more configuration); no accounts |
+| 15 | How checkout publishes atomically | `POST /orders` sends a `PlaceOrder` command to the Orders endpoint itself; its handler saves the order and publishes `OrderPlaced` through the **outbox** (EF Core joins NServiceBus's connection and transaction). The API returns 202 and the client polls. | Saving and publishing directly in the web request (not atomic without the extra Transactional Session package) |
+| 16 | Status updates | The saga publishes `OrderStatusChanged`; the Orders API owns the `orders` table and applies a status only if it moves the order forward (events can arrive late or twice) | The saga writing to the orders table directly (two owners of the same data) |
+| 17 | Message placement | Cross-service messages in `MiniKobo.Contracts`; messages used inside one service (`PlaceOrder`, `ProcessPayment`, …) stay in that service | Everything in Contracts (couples services to each other's internals) |
+| 18 | Catalog idempotency | A `reservations/{orderId}` document records each reservation's outcome; duplicates get the same reply. Optimistic concurrency + retries prevent overselling. No outbox needed in Catalog. | NServiceBus outbox with RavenDB persistence |
+| 19 | Frontend data access | Server Components fetch the Catalog API directly; browser code calls `/api/*`, proxied by Next.js rewrites | CORS on both APIs |
+| 20 | Local orchestration | `scripts/dev-up.sh` starts infrastructure (Docker) and runs the services on the host; CI reuses it for Playwright | Containerising every service now (deferred to M7) |

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+  <PropertyGroup>
+    <!-- Same id as MiniKobo.Orders.Api on purpose: both read the one "ConnectionStrings:Orders" secret. -->
+    <UserSecretsId>68677c1d-95cd-4297-b172-d182bfdfa435</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NServiceBus" />
+    <PackageReference Include="NServiceBus.Persistence.Sql" />
+    <PackageReference Include="NServiceBus.RabbitMQ" />
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MiniKobo.Contracts\MiniKobo.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="NServiceBus" />
+  </ItemGroup>
+</Project>

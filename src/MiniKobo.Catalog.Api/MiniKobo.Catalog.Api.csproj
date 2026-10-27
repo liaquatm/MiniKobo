@@ -1,9 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <ItemGroup>
+    <PackageReference Include="NServiceBus.RabbitMQ" />
     <PackageReference Include="RavenDB.Client" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="MiniKobo.Catalog.Api.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MiniKobo.Contracts\MiniKobo.Contracts.csproj" />
   </ItemGroup>
 </Project>
