@@ -8,5 +8,8 @@
   <Folder Name="/tests/">
     <Project Path="tests/MiniKobo.Catalog.Api.IntegrationTests/MiniKobo.Catalog.Api.IntegrationTests.csproj" />
     <Project Path="tests/MiniKobo.Catalog.Api.UnitTests/MiniKobo.Catalog.Api.UnitTests.csproj" />
+    <Project Path="tests/MiniKobo.Orders.Api.IntegrationTests/MiniKobo.Orders.Api.IntegrationTests.csproj" />
+    <Project Path="tests/MiniKobo.Orders.Api.UnitTests/MiniKobo.Orders.Api.UnitTests.csproj" />
+    <Project Path="tests/MiniKobo.Orders.Worker.UnitTests/MiniKobo.Orders.Worker.UnitTests.csproj" />
   </Folder>
 </Solution>

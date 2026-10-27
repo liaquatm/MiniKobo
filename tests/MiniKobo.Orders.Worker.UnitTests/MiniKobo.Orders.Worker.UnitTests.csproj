@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="NServiceBus.Testing" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MiniKobo.Orders.Worker\MiniKobo.Orders.Worker.csproj" />
+  </ItemGroup>
+</Project>

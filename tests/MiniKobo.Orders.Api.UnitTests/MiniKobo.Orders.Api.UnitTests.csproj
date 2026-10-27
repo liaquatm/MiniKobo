@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MiniKobo.Orders.Api\MiniKobo.Orders.Api.csproj" />
+  </ItemGroup>
+</Project>
